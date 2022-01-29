@@ -4,7 +4,7 @@ import fetch from 'node-fetch';
 import { ethers } from "ethers";
 
 const OPENSEA_SHARED_STOREFRONT_ADDRESS = '0x495f947276749Ce646f68AC8c248420045cb7b5e';
-const my_id = '<@>'
+const my_id = '<@>';
 
 const discordBot = new Discord.Client();
 const  discordSetup = async (channel: string): Promise<TextChannel> => {
@@ -32,13 +32,13 @@ const buildMessage = (sale: any) => (
 		{ name: 'Buyer', value: sale?.winner_account?.address, },
 		{ name: 'Seller', value: sale?.seller?.address,  },
 	)
-  .setDescription(my_id)
   .setImage(sale.asset.image_url)
 	.setTimestamp(Date.parse(`${sale?.created_date}Z`))
 	.setFooter('Sold on OpenSea', 'https://files.readme.io/566c72b-opensea-logomark-full-colored.png')
 )
 
 async function main() {
+  const channel = await discordSetup(process.env.DISCORD_CHANNEL_ID);
   var binary = true;
   const seconds = process.env.SECONDS ? parseInt(process.env.SECONDS) : 1000;
   const hoursAgo = (Math.round(new Date().getTime() / 1000) - (seconds)); // in the last hour, run hourly?
@@ -84,17 +84,11 @@ async function main() {
         openSeaResponse?.asset_events?.reverse().map(async (sale: any) => {
           
           if (sale.asset.name == null) sale.asset.name = 'Unnamed NFT';
-
           const message = buildMessage(sale);
-          const channel = discordBot.channels.cache.get(my_id);
-          (channel as TextChannel).send(my_id);
+          channel.send(my_id);
           binary = false;
 
-          return await Promise.all(
-            process.env.DISCORD_CHANNEL_ID.split(';').map(async (channel: string) => {
-              return await (await discordSetup(channel)).send(message)
-            })
-          );
+          return await (await channel.send(message));
         })
       );
     } catch (e) {
@@ -108,11 +102,7 @@ async function main() {
     }
   }
   if(binary){
-    return await Promise.all(
-      process.env.DISCORD_CHANNEL_ID.split(';').map(async (channel: string) => {
-        return await (await discordSetup(channel)).send('Nothing found')
-      })
-    );
+    return await (await channel.send("Nothing found"));
   }
   binary = true;
   return Promise.all;
@@ -120,7 +110,6 @@ async function main() {
 
 main()
   .then((res) =>{
-    if (!res.length) console.log("No recent sales");
     process.exit(0)
   })
   .catch(error => {
